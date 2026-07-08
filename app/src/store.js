@@ -26,9 +26,22 @@ export class Store {
       projectFilter: 'All projects', missingOnly: false, queueFilter: 'all', scope: 'mine', queuePage: 0, rosterPage: 0,
       toast: '', emailOpen: false, email: null,
       reviewOpen: false, review: null, rejectReason: '',
+      projects: Object.entries(this.PM).map(([name, pm]) => ({ name, pm })),
       subs: this.makeSeed(),
+      route: null,
+      onboardOpen: false, onboardMode: 'sub', onboardError: '', onboardCreatedLink: null,
+      onboardSub: { name: '', trade: '', project: '', email: '' },
+      onboardProject: { name: '', pm: '' },
     };
     this._listeners = new Set();
+
+    // Public subcontractor upload portal is reached via the URL hash
+    // (#/upload/<subId>/<token>) so a single deployed build serves both the
+    // PM app and the sub-facing upload page. Parse it now and on every change.
+    if (typeof window !== 'undefined') {
+      this.state.route = this.parseHash();
+      window.addEventListener('hashchange', () => this.set({ route: this.parseHash(), drawerOpen: false }));
+    }
   }
 
   subscribe(fn) { this._listeners.add(fn); return () => this._listeners.delete(fn); }
@@ -104,7 +117,10 @@ export class Store {
 
   // ---- helpers ----
   findSub(id) { return this.state.subs.find((s) => s.id === id); }
-  pmFor(project) { return this.PM[project] || 'Unassigned'; }
+  pmFor(project) { const p = this.state.projects.find((x) => x.name === project); return p ? p.pm : (this.PM[project] || 'Unassigned'); }
+  projectNames() { return Array.from(new Set([...this.state.projects.map((p) => p.name), ...this.state.subs.map((s) => s.project)])); }
+  parseHash() { const h = (window.location.hash || '').replace(/^#/, ''); const m = h.match(/^\/upload\/([^/]+)\/([^/?]+)/); return m ? { name: 'upload', subId: decodeURIComponent(m[1]), token: m[2] } : null; }
+  uploadLink(subId) { if (typeof window === 'undefined') return ''; const { origin, pathname } = window.location; return origin + pathname + '#/upload/' + subId + '/' + this.tok(subId); }
   nextTime() { this._min += 7; const h = 9 + Math.floor(this._min / 60); const m = this._min % 60; return 'Jul 8 · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); }
   addAudit(sub, actor, text) { sub.audit.unshift({ actor, text, ts: this.nextTime() }); }
   showToast(msg) { this.set({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.set({ toast: '' }), 3800); }
@@ -280,6 +296,75 @@ export class Store {
     this.showToast('Daily sweep complete · ' + rem + ' reminders · ' + exp + ' expiry warnings · ' + esc + ' escalated to GC/PM');
   };
 
+  // ---- onboarding (create project / subcontractor) ----
+  openOnboard = (mode) => this.set({ onboardOpen: true, onboardMode: mode || 'sub', onboardError: '', onboardCreatedLink: null });
+  closeOnboard = () => this.set({ onboardOpen: false, onboardError: '', onboardCreatedLink: null });
+  setOnboardMode = (mode) => this.set({ onboardMode: mode, onboardError: '' });
+  onOnboardSub = (field, e) => { this.state.onboardSub[field] = e.target.value; this.forceUpdate(); };
+  onOnboardProject = (field, e) => { this.state.onboardProject[field] = e.target.value; this.forceUpdate(); };
+
+  submitOnboardProject = () => {
+    const f = this.state.onboardProject, name = (f.name || '').trim(), pm = (f.pm || '').trim() || 'Unassigned';
+    if (!name) { this.set({ onboardError: 'Project name is required.' }); return; }
+    if (this.state.projects.some((p) => p.name.toLowerCase() === name.toLowerCase())) { this.set({ onboardError: 'A project with that name already exists.' }); return; }
+    this.state.projects.push({ name, pm });
+    this.state.onboardProject = { name: '', pm: '' };
+    this.set({ onboardOpen: false, onboardError: '' });
+    this.showToast('Project "' + name + '" created' + (pm !== 'Unassigned' ? (' · PM ' + pm) : ''));
+  };
+
+  submitOnboardSub = () => {
+    const f = this.state.onboardSub;
+    const name = (f.name || '').trim(), trade = (f.trade || '').trim(), project = (f.project || '').trim(), email = (f.email || '').trim();
+    if (!name || !project || !email) { this.set({ onboardError: 'Name, project, and email are required.' }); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { this.set({ onboardError: 'Enter a valid email address.' }); return; }
+    const nums = this.state.subs.map((s) => parseInt(String(s.id).replace(/\D/g, ''), 10)).filter((n) => !isNaN(n));
+    const id = 's' + ((nums.length ? Math.max(...nums) : -1) + 1);
+    const mk = (extra) => Object.assign({ status: 'missing', overdueDays: null, expiringDays: null, expiry: null, reason: null, period: null, escalation: 0 }, extra || {});
+    const sub = {
+      id, name, trade: trade || '—', project, email,
+      docs: { insurance: mk(), w9: mk(), payroll: mk({ period: 'Week of Jul 7' }), workforce: mk({ period: 'July' }) }, audit: [],
+    };
+    if (!this.state.projects.some((p) => p.name === project)) this.state.projects.push({ name: project, pm: 'Unassigned' });
+    sub.audit.unshift({ actor: 'SYSTEM', ts: this.nextTime(), text: 'Subcontractor added to ' + project + '. Requirement set auto-generated (Insurance, W-9, weekly Payroll, monthly Workforce).' });
+    const link = this.uploadLink(id);
+    sub.audit.unshift({ actor: 'SYSTEM', ts: this.nextTime(), text: 'Secure upload link generated and emailed to ' + email + '.' });
+    this.state.subs.push(sub);
+    this.state.onboardSub = { name: '', trade: '', project: '', email: '' };
+    this.set({ onboardError: '', onboardCreatedLink: { link, subName: name, subId: id } });
+    this.showToast(name + ' onboarded · secure upload link generated');
+  };
+
+  copyUploadLink = () => { const l = this.state.onboardCreatedLink; if (l && typeof navigator !== 'undefined' && navigator.clipboard) navigator.clipboard.writeText(l.link); this.showToast('Upload link copied to clipboard'); };
+  openUploadLink = () => { const l = this.state.onboardCreatedLink; if (l) window.location.hash = '#/upload/' + l.subId + '/' + this.tok(l.subId); this.set({ onboardOpen: false }); };
+
+  // ---- subcontractor upload portal ----
+  exitPortal = () => { window.location.hash = ''; };
+  portalUpload = (subId, docKey) => {
+    const sub = this.findSub(subId), doc = sub.docs[docKey], def = this.DOCS.find((d) => d.key === docKey);
+    doc.status = 'needs_review'; doc.overdueDays = null; doc.reason = null;
+    this.addAudit(sub, 'SYSTEM', def.label + ' uploaded by subcontractor via secure link — routed to review.');
+    this.forceUpdate();
+    this.showToast(def.label + ' uploaded · sent to the compliance team for review');
+  };
+  buildPortal(subId, token) {
+    const sub = this.findSub(subId);
+    if (!sub || token !== this.tok(subId)) return { valid: false };
+    const items = this.DOCS.map((def) => {
+      const doc = sub.docs[def.key], meta = this.stampMeta(doc);
+      const outstanding = ['missing', 'rejected', 'expired'].includes(doc.status);
+      const pending = ['needs_review', 'submitted'].includes(doc.status);
+      const done = doc.status === 'approved';
+      return {
+        key: def.key, label: def.label, cadence: def.cadence, stampLabel: meta.label, stampStyle: this.stampStyle(meta),
+        outstanding, pending, done, reason: doc.status === 'rejected' ? doc.reason : null,
+        onUpload: outstanding ? (() => this.portalUpload(subId, def.key)) : null,
+      };
+    });
+    const outstandingCount = items.filter((i) => i.outstanding).length;
+    return { valid: true, subId, subName: sub.name, project: sub.project, trade: sub.trade, items, outstandingCount, allSubmitted: outstandingCount === 0 };
+  }
+
   // ---- view-model builders ----
   buildQueueAll() {
     const C = this.C(), DOCS = this.DOCS, items = [];
@@ -347,7 +432,7 @@ export class Store {
     const isDashboard = view === 'dashboard', isSubs = view === 'subs', isProjects = view === 'projects', isDetailPage = view === 'detail';
     const showRoster = isDashboard || isSubs;
 
-    const projects = Array.from(new Set(S.subs.map((s) => s.project)));
+    const projects = this.projectNames();
     const projectOptions = ['All projects'].concat(projects);
     const visible = this.visibleSubs();
 
@@ -527,6 +612,19 @@ export class Store {
       closeModal: this.closeModal, stop: this.stop,
       reviewOpen: S.reviewOpen, review, approve: this.approve, startReject: this.startReject, cancelReject: this.cancelReject,
       confirmReject: this.confirmReject, rejectReason: S.rejectReason, onRejectReason: this.onRejectReason,
+
+      // routing + subcontractor upload portal
+      route: S.route,
+      portal: (S.route && S.route.name === 'upload') ? this.buildPortal(S.route.subId, S.route.token) : null,
+      exitPortal: this.exitPortal, portalUpload: this.portalUpload,
+
+      // onboarding (create project / subcontractor)
+      onboardOpen: S.onboardOpen, onboardMode: S.onboardMode, onboardError: S.onboardError, onboardCreatedLink: S.onboardCreatedLink,
+      onboardSub: S.onboardSub, onboardProject: S.onboardProject, onboardProjectNames: projects,
+      openOnboard: this.openOnboard, closeOnboard: this.closeOnboard, setOnboardMode: this.setOnboardMode,
+      onOnboardSub: this.onOnboardSub, onOnboardProject: this.onOnboardProject,
+      submitOnboardSub: this.submitOnboardSub, submitOnboardProject: this.submitOnboardProject,
+      copyUploadLink: this.copyUploadLink, openUploadLink: this.openUploadLink,
     };
   }
 }

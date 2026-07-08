@@ -9,9 +9,14 @@ import Drawer from './components/Drawer.jsx';
 import Toast from './components/Toast.jsx';
 import EmailModal from './components/EmailModal.jsx';
 import ReviewModal from './components/ReviewModal.jsx';
+import OnboardModal from './components/OnboardModal.jsx';
+import UploadPortal from './components/UploadPortal.jsx';
 
 export default function App() {
   const vm = useStore();
+
+  // Public subcontractor upload portal (reached via the secure link hash route).
+  if (vm.route && vm.route.name === 'upload') return <UploadPortal vm={vm} />;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F7F6F3', color: '#1C2B39', fontFamily: 'Inter,system-ui,sans-serif', fontSize: 15, lineHeight: 1.5, WebkitFontSmoothing: 'antialiased' }}>
@@ -32,6 +37,7 @@ export default function App() {
       <Toast vm={vm} />
       <EmailModal vm={vm} />
       <ReviewModal vm={vm} />
+      <OnboardModal vm={vm} />
     </div>
   );
 }

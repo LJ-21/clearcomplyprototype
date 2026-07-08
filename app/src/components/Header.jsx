@@ -22,6 +22,13 @@ export default function Header({ vm }) {
           {vm.projectOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
         </select>
         <button
+          onClick={() => vm.openOnboard('sub')}
+          className="cc-outline-btn"
+          style={{ background: '#fff', color: '#1C2B39', border: '1px solid #E3E1DB', borderRadius: 3, padding: '9px 16px', fontWeight: 600, fontSize: '13.5px' }}
+        >
+          + New
+        </button>
+        <button
           onClick={vm.runSweep}
           className="cc-primary-btn"
           style={{ background: '#0E5FD8', color: '#fff', border: '1px solid #0E5FD8', borderRadius: 3, padding: '9px 16px', fontWeight: 600, fontSize: '13.5px' }}
