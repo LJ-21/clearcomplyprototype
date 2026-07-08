@@ -10,7 +10,15 @@ export default function DetailPage({ vm }) {
         <div style={{ flex: 1, minWidth: 240 }}>
           <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#5A6B7A' }}>{detail.project} · PM {detail.pm}</div>
           <h1 style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 30, margin: '4px 0 6px' }}>{detail.name}</h1>
-          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, color: '#5A6B7A' }}>{detail.email}</div>
+          {detail.contactName && <div style={{ fontSize: 13, color: '#5A6B7A', marginBottom: 2 }}>Contact · <span style={{ color: '#1C2B39', fontWeight: 600 }}>{detail.contactName}</span></div>}
+          <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13, color: '#5A6B7A' }}>{detail.email}{detail.phone ? ' · ' + detail.phone : ''}</div>
+          {detail.gc && (
+            <div style={{ marginTop: 12, padding: '10px 12px', background: '#FBFBFA', border: '1px solid #EEF0F2', borderRadius: 6, maxWidth: 340 }}>
+              <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8A93A0' }}>Escalation contact · GC</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{detail.gc.company}{detail.gc.contact ? ' · ' + detail.gc.contact : ''}</div>
+              {(detail.gc.email || detail.gc.phone) && <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '11.5px', color: '#5A6B7A', marginTop: 2 }}>{detail.gc.email}{detail.gc.email && detail.gc.phone ? ' · ' : ''}{detail.gc.phone}</div>}
+            </div>
+          )}
         </div>
         <div style={{ minWidth: 240 }}>
           <div style={{ height: 9, background: '#EEF0F2', borderRadius: 4, overflow: 'hidden' }}><div style={detail.meterFillStyle} /></div>

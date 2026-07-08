@@ -26,12 +26,16 @@ export class Store {
       projectFilter: 'All projects', missingOnly: false, queueFilter: 'all', scope: 'mine', queuePage: 0, rosterPage: 0,
       toast: '', emailOpen: false, email: null,
       reviewOpen: false, review: null, rejectReason: '',
-      projects: Object.entries(this.PM).map(([name, pm]) => ({ name, pm })),
+      projects: [
+        { name: 'Riverside Tower', pm: 'Dana Ruiz', location: '450 Riverside Dr, Chicago, IL', startDate: '2026-04-01', endDate: '2026-12-15', requiredDocs: ['insurance', 'w9', 'payroll', 'workforce'], gcCompany: 'Turner–Ridgeline JV', gcContact: 'Mark Feld', gcEmail: 'mfeld@ridgelinegc.com', gcPhone: '(312) 555-0142', notes: '$2M GL minimum · Davis-Bacon prevailing wage' },
+        { name: 'Midtown Transit Hub', pm: 'Marcus Bell', location: '88 Midtown Ave, New York, NY', startDate: '2026-02-15', endDate: '2027-03-30', requiredDocs: ['insurance', 'w9', 'payroll', 'workforce'], gcCompany: 'Metro Builders Group', gcContact: 'Sofia Reyes', gcEmail: 'sreyes@metrobuilders.com', gcPhone: '(212) 555-0198', notes: 'Public transit authority contract' },
+        { name: 'Harbor Point Ph. 2', pm: 'Priya Nair', location: '1200 Harbor Blvd, San Francisco, CA', startDate: '2026-05-01', endDate: '2026-11-30', requiredDocs: ['insurance', 'w9', 'payroll', 'workforce'], gcCompany: 'Coastline Construction', gcContact: 'Dev Kapoor', gcEmail: 'dkapoor@coastlinecc.com', gcPhone: '(415) 555-0176', notes: '' },
+      ],
       subs: this.makeSeed(),
       route: null,
-      onboardOpen: false, onboardMode: 'sub', onboardError: '', onboardCreatedLink: null,
-      onboardSub: { name: '', trade: '', project: '', email: '' },
-      onboardProject: { name: '', pm: '' },
+      onboardOpen: false, onboardMode: 'sub', onboardStep: 1, onboardError: '', onboardCreatedLink: null,
+      onboardSub: this.blankSub(),
+      onboardProject: this.blankProject(),
     };
     this._listeners = new Set();
 
@@ -121,6 +125,11 @@ export class Store {
   projectNames() { return Array.from(new Set([...this.state.projects.map((p) => p.name), ...this.state.subs.map((s) => s.project)])); }
   parseHash() { const h = (window.location.hash || '').replace(/^#/, ''); const m = h.match(/^\/upload\/([^/]+)\/([^/?]+)/); return m ? { name: 'upload', subId: decodeURIComponent(m[1]), token: m[2] } : null; }
   uploadLink(subId) { if (typeof window === 'undefined') return ''; const { origin, pathname } = window.location; return origin + pathname + '#/upload/' + subId + '/' + this.tok(subId); }
+  blankSub() { return { name: '', trade: '', project: '', email: '', contactName: '', phone: '' }; }
+  blankProject() { return { name: '', location: '', startDate: '', endDate: '', notes: '', pmSelect: '', pmNew: '', gcSelect: '', gcCompany: '', gcContact: '', gcEmail: '', gcPhone: '' }; }
+  existingPms() { return Array.from(new Set(this.state.projects.map((p) => p.pm).filter(Boolean))); }
+  existingGcs() { const seen = new Map(); this.state.projects.forEach((p) => { if (p.gcCompany && !seen.has(p.gcCompany)) seen.set(p.gcCompany, { company: p.gcCompany, contact: p.gcContact || '', email: p.gcEmail || '', phone: p.gcPhone || '' }); }); return Array.from(seen.values()); }
+  fmtDay(s) { if (!s) return ''; const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
   nextTime() { this._min += 7; const h = 9 + Math.floor(this._min / 60); const m = this._min % 60; return 'Jul 8 · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); }
   addAudit(sub, actor, text) { sub.audit.unshift({ actor, text, ts: this.nextTime() }); }
   showToast(msg) { this.set({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.set({ toast: '' }), 3800); }
@@ -209,10 +218,14 @@ export class Store {
   setScope = (sc) => this.set({ scope: sc, queuePage: 0 });
   escalateToGC = (subId, docKey) => {
     const sub = this.findSub(subId), doc = sub.docs[docKey], def = this.DOCS.find((d) => d.key === docKey);
+    const proj = this.state.projects.find((p) => p.name === sub.project);
     doc.escalation = Math.max(doc.escalation || 0, 4);
-    this.addAudit(sub, 'YOU', 'Escalated ' + def.label + ' to GC / PM — payment hold flagged.');
+    const gcName = proj && proj.gcCompany ? proj.gcCompany : 'GC / PM';
+    const who = proj && proj.gcContact ? (gcName + ' (' + proj.gcContact + ')') : gcName;
+    const via = proj && proj.gcEmail ? (' · notified ' + proj.gcEmail) : '';
+    this.addAudit(sub, 'YOU', 'Escalated ' + def.label + ' to ' + who + ' — payment hold flagged' + via + '.');
     this.forceUpdate();
-    this.showToast('Escalated to GC / PM · payment hold flagged for ' + sub.name);
+    this.showToast('Escalated to ' + gcName + ' · payment hold flagged for ' + sub.name);
   };
   closeModal = () => this.set({ emailOpen: false, reviewOpen: false });
   stop = (e) => e.stopPropagation();
@@ -297,18 +310,48 @@ export class Store {
   };
 
   // ---- onboarding (create project / subcontractor) ----
-  openOnboard = (mode) => this.set({ onboardOpen: true, onboardMode: mode || 'sub', onboardError: '', onboardCreatedLink: null });
-  closeOnboard = () => this.set({ onboardOpen: false, onboardError: '', onboardCreatedLink: null });
-  setOnboardMode = (mode) => this.set({ onboardMode: mode, onboardError: '' });
+  reqDocsFor(projectName) {
+    const p = this.state.projects.find((x) => x.name === projectName);
+    const ids = p && p.requiredDocs ? p.requiredDocs : this.DOCS.map((d) => d.key);
+    return this.DOCS.filter((d) => ids.includes(d.key));
+  }
+  openOnboard = (mode) => this.set({ onboardOpen: true, onboardMode: mode || 'sub', onboardStep: 1, onboardError: '', onboardCreatedLink: null, onboardSub: this.blankSub(), onboardProject: this.blankProject() });
+  closeOnboard = () => this.set({ onboardOpen: false, onboardStep: 1, onboardError: '', onboardCreatedLink: null });
+  setOnboardMode = (mode) => this.set({ onboardMode: mode, onboardStep: 1, onboardError: '' });
   onOnboardSub = (field, e) => { this.state.onboardSub[field] = e.target.value; this.forceUpdate(); };
   onOnboardProject = (field, e) => { this.state.onboardProject[field] = e.target.value; this.forceUpdate(); };
+  onOnboardPmSelect = (e) => { const v = e.target.value; this.state.onboardProject.pmSelect = v; if (v !== '__new__') this.state.onboardProject.pmNew = ''; this.forceUpdate(); };
+  onOnboardGcSelect = (e) => {
+    const v = e.target.value, p = this.state.onboardProject;
+    p.gcSelect = v;
+    if (v === '__new__' || v === '') { p.gcCompany = ''; p.gcContact = ''; p.gcEmail = ''; p.gcPhone = ''; }
+    else { const g = this.existingGcs().find((x) => x.company === v); if (g) { p.gcCompany = g.company; p.gcContact = g.contact; p.gcEmail = g.email; p.gcPhone = g.phone; } }
+    this.forceUpdate();
+  };
+  onboardBack = () => this.set({ onboardStep: 1, onboardError: '' });
+  onboardNext = () => {
+    const f = this.state.onboardSub;
+    const name = (f.name || '').trim(), project = (f.project || '').trim(), email = (f.email || '').trim();
+    if (!name || !project || !email) { this.set({ onboardError: 'Company name, project, and email are required.' }); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { this.set({ onboardError: 'Enter a valid email address.' }); return; }
+    this.set({ onboardStep: 2, onboardError: '' });
+  };
 
   submitOnboardProject = () => {
-    const f = this.state.onboardProject, name = (f.name || '').trim(), pm = (f.pm || '').trim() || 'Unassigned';
+    const f = this.state.onboardProject, name = (f.name || '').trim();
+    const pm = (f.pmSelect === '__new__' ? (f.pmNew || '').trim() : (f.pmSelect || '').trim()) || 'Unassigned';
+    const gcEmail = (f.gcEmail || '').trim();
     if (!name) { this.set({ onboardError: 'Project name is required.' }); return; }
     if (this.state.projects.some((p) => p.name.toLowerCase() === name.toLowerCase())) { this.set({ onboardError: 'A project with that name already exists.' }); return; }
-    this.state.projects.push({ name, pm });
-    this.state.onboardProject = { name: '', pm: '' };
+    if (f.pmSelect === '__new__' && !(f.pmNew || '').trim()) { this.set({ onboardError: 'Enter the new project manager’s name.' }); return; }
+    if (gcEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(gcEmail)) { this.set({ onboardError: 'Enter a valid GC email address.' }); return; }
+    if (f.startDate && f.endDate && f.endDate < f.startDate) { this.set({ onboardError: 'End date must be after the start date.' }); return; }
+    this.state.projects.push({
+      name, pm, location: (f.location || '').trim(), startDate: f.startDate || '', endDate: f.endDate || '',
+      requiredDocs: ['insurance', 'w9', 'payroll', 'workforce'],
+      gcCompany: (f.gcCompany || '').trim(), gcContact: (f.gcContact || '').trim(), gcEmail, gcPhone: (f.gcPhone || '').trim(), notes: (f.notes || '').trim(),
+    });
+    this.state.onboardProject = this.blankProject();
     this.set({ onboardOpen: false, onboardError: '' });
     this.showToast('Project "' + name + '" created' + (pm !== 'Unassigned' ? (' · PM ' + pm) : ''));
   };
@@ -316,23 +359,25 @@ export class Store {
   submitOnboardSub = () => {
     const f = this.state.onboardSub;
     const name = (f.name || '').trim(), trade = (f.trade || '').trim(), project = (f.project || '').trim(), email = (f.email || '').trim();
-    if (!name || !project || !email) { this.set({ onboardError: 'Name, project, and email are required.' }); return; }
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { this.set({ onboardError: 'Enter a valid email address.' }); return; }
+    if (!name || !project || !email) { this.set({ onboardStep: 1, onboardError: 'Company name, project, and email are required.' }); return; }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { this.set({ onboardStep: 1, onboardError: 'Enter a valid email address.' }); return; }
     const nums = this.state.subs.map((s) => parseInt(String(s.id).replace(/\D/g, ''), 10)).filter((n) => !isNaN(n));
     const id = 's' + ((nums.length ? Math.max(...nums) : -1) + 1);
     const mk = (extra) => Object.assign({ status: 'missing', overdueDays: null, expiringDays: null, expiry: null, reason: null, period: null, escalation: 0 }, extra || {});
-    const sub = {
-      id, name, trade: trade || '—', project, email,
-      docs: { insurance: mk(), w9: mk(), payroll: mk({ period: 'Week of Jul 7' }), workforce: mk({ period: 'July' }) }, audit: [],
-    };
-    if (!this.state.projects.some((p) => p.name === project)) this.state.projects.push({ name: project, pm: 'Unassigned' });
-    sub.audit.unshift({ actor: 'SYSTEM', ts: this.nextTime(), text: 'Subcontractor added to ' + project + '. Requirement set auto-generated (Insurance, W-9, weekly Payroll, monthly Workforce).' });
+    const contactName = (f.contactName || '').trim(), phone = (f.phone || '').trim();
+    const reqDefs = this.reqDocsFor(project);
+    const docs = {};
+    reqDefs.forEach((d) => { docs[d.key] = mk(d.key === 'payroll' ? { period: 'Week of Jul 7' } : d.key === 'workforce' ? { period: 'July' } : undefined); });
+    const sub = { id, name, trade: trade || '—', project, email, contactName, phone, docs, audit: [] };
+    if (!this.state.projects.some((p) => p.name === project)) this.state.projects.push({ name: project, pm: 'Unassigned', requiredDocs: this.DOCS.map((d) => d.key) });
+    const reqList = reqDefs.map((d) => d.label).join(', ');
+    sub.audit.unshift({ actor: 'SYSTEM', ts: this.nextTime(), text: 'Subcontractor added to ' + project + '. Requirement set auto-generated (' + reqList + ').' });
     const link = this.uploadLink(id);
-    sub.audit.unshift({ actor: 'SYSTEM', ts: this.nextTime(), text: 'Secure upload link generated and emailed to ' + email + '.' });
+    sub.audit.unshift({ actor: 'SYSTEM', ts: this.nextTime(), text: 'Welcome email with secure upload link sent to ' + email + '.' });
     this.state.subs.push(sub);
-    this.state.onboardSub = { name: '', trade: '', project: '', email: '' };
-    this.set({ onboardError: '', onboardCreatedLink: { link, subName: name, subId: id } });
-    this.showToast(name + ' onboarded · secure upload link generated');
+    this.state.onboardSub = { name: '', trade: '', project: '', email: '', contactName: '', phone: '' };
+    this.set({ onboardError: '', onboardCreatedLink: { link, subName: name, subId: id, project, email, docCount: reqDefs.length } });
+    this.showToast(name + ' onboarded to ' + project + ' · secure upload link generated');
   };
 
   copyUploadLink = () => { const l = this.state.onboardCreatedLink; if (l && typeof navigator !== 'undefined' && navigator.clipboard) navigator.clipboard.writeText(l.link); this.showToast('Upload link copied to clipboard'); };
@@ -534,8 +579,12 @@ export class Store {
         let approved = 0, atRisk = 0;
         subs.forEach((s) => DOCS.forEach((def) => { const st = s.docs[def.key].status; if (st === 'approved') approved++; if (['missing', 'rejected', 'expired', 'expiring'].includes(st)) atRisk++; }));
         const pct = subs.length ? Math.round((approved / (subs.length * 4)) * 100) : 0, mColor = pct >= 80 ? C.ok : pct >= 50 ? C.warn : C.danger;
+        const proj = this.state.projects.find((p) => p.name === name) || {};
+        const timeline = (proj.startDate || proj.endDate) ? (this.fmtDay(proj.startDate) + ' – ' + (this.fmtDay(proj.endDate) || 'TBD')) : '';
         return {
           key: name, name, pm: this.pmFor(name), subCount: subs.length, atRisk,
+          location: proj.location || '', timeline,
+          gcCompany: proj.gcCompany || '', gcContact: proj.gcContact || '', gcEmail: proj.gcEmail || '', gcPhone: proj.gcPhone || '', notes: proj.notes || '',
           meterFillStyle: { width: pct + '%', height: '100%', background: mColor, borderRadius: '4px' },
           meterLabel: pct + '% of required documents approved',
           meterLabelStyle: { fontFamily: "'IBM Plex Mono',monospace", fontSize: '11px', color: mColor, marginTop: '6px' },
@@ -574,8 +623,11 @@ export class Store {
         };
       });
       const audit = s.audit.map((e, ai) => ({ key: ai, actor: e.actor, ts: e.ts, text: e.text, chipStyle: this.chipStyle(e.actor) }));
+      const dproj = this.state.projects.find((p) => p.name === s.project) || {};
       detail = {
         name: s.name, project: s.project, pm: this.pmFor(s.project), email: s.email,
+        contactName: s.contactName || '', phone: s.phone || '',
+        gc: dproj.gcCompany ? { company: dproj.gcCompany, contact: dproj.gcContact || '', email: dproj.gcEmail || '', phone: dproj.gcPhone || '' } : null,
         meterFillStyle: { width: pct + '%', height: '100%', background: mColor, borderRadius: '4px' },
         meterLabel: approved + '/4 required approved · ' + pct + '%',
         meterLabelStyle: { fontFamily: "'IBM Plex Mono',monospace", fontSize: '12px', color: mColor, marginTop: '6px' },
@@ -619,10 +671,15 @@ export class Store {
       exitPortal: this.exitPortal, portalUpload: this.portalUpload,
 
       // onboarding (create project / subcontractor)
-      onboardOpen: S.onboardOpen, onboardMode: S.onboardMode, onboardError: S.onboardError, onboardCreatedLink: S.onboardCreatedLink,
+      onboardOpen: S.onboardOpen, onboardMode: S.onboardMode, onboardStep: S.onboardStep, onboardError: S.onboardError, onboardCreatedLink: S.onboardCreatedLink,
       onboardSub: S.onboardSub, onboardProject: S.onboardProject, onboardProjectNames: projects,
+      onboardReqPreview: S.onboardSub.project ? this.reqDocsFor(S.onboardSub.project).map((d) => ({ key: d.key, label: d.label, cadence: d.cadence })) : [],
+      onboardProjectPm: S.onboardSub.project ? this.pmFor(S.onboardSub.project) : null,
+      onboardPms: this.existingPms(), onboardGcs: this.existingGcs(),
       openOnboard: this.openOnboard, closeOnboard: this.closeOnboard, setOnboardMode: this.setOnboardMode,
       onOnboardSub: this.onOnboardSub, onOnboardProject: this.onOnboardProject,
+      onOnboardPmSelect: this.onOnboardPmSelect, onOnboardGcSelect: this.onOnboardGcSelect,
+      onboardNext: this.onboardNext, onboardBack: this.onboardBack,
       submitOnboardSub: this.submitOnboardSub, submitOnboardProject: this.submitOnboardProject,
       copyUploadLink: this.copyUploadLink, openUploadLink: this.openUploadLink,
     };

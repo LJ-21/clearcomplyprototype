@@ -7,6 +7,19 @@ export default function Projects({ vm }) {
           <div key={p.key} style={{ background: '#fff', border: '1px solid #E3E1DB', borderRadius: 6, boxShadow: '0 1px 2px rgb(28 43 57 / 0.06)', padding: 18 }}>
             <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 19 }}>{p.name}</div>
             <div style={{ fontSize: '12.5px', color: '#5A6B7A', marginTop: 2 }}>Project Manager · <span style={{ color: '#1C2B39', fontWeight: 600 }}>{p.pm}</span></div>
+            {p.location && <div style={{ fontSize: '12.5px', color: '#5A6B7A', marginTop: 3 }}>Location · {p.location}</div>}
+            {p.timeline && <div style={{ fontSize: '12.5px', color: '#5A6B7A', marginTop: 2 }}>Timeline · {p.timeline}</div>}
+            {p.gcCompany && (
+              <div style={{ marginTop: 10, padding: '10px 12px', background: '#FBFBFA', border: '1px solid #EEF0F2', borderRadius: 6 }}>
+                <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8A93A0' }}>General contractor · escalation</div>
+                <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{p.gcCompany}</div>
+                {p.gcContact && <div style={{ fontSize: '12.5px', color: '#5A6B7A', marginTop: 1 }}>{p.gcContact}</div>}
+                {(p.gcEmail || p.gcPhone) && (
+                  <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '11.5px', color: '#5A6B7A', marginTop: 3 }}>{p.gcEmail}{p.gcEmail && p.gcPhone ? ' · ' : ''}{p.gcPhone}</div>
+                )}
+                {p.notes && <div style={{ fontSize: '12px', color: '#5A6B7A', marginTop: 6, lineHeight: 1.45 }}>{p.notes}</div>}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 20, margin: '16px 0 6px' }}>
               <div><div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 24 }}>{p.subCount}</div><div style={{ fontSize: 11, color: '#5A6B7A' }}>subs</div></div>
               <div><div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 24, color: '#B3261E' }}>{p.atRisk}</div><div style={{ fontSize: 11, color: '#5A6B7A' }}>at-risk items</div></div>

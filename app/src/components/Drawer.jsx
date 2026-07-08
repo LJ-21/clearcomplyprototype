@@ -11,7 +11,8 @@ export default function Drawer({ vm }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#5A6B7A' }}>{detail.project} · PM {detail.pm}</div>
             <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 23, marginTop: 1 }}>{detail.name}</div>
-            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '12.5px', color: '#5A6B7A', marginTop: 2 }}>{detail.email}</div>
+            {detail.contactName && <div style={{ fontSize: '12.5px', color: '#5A6B7A', marginTop: 3 }}>Contact · <span style={{ color: '#1C2B39', fontWeight: 600 }}>{detail.contactName}</span></div>}
+            <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '12.5px', color: '#5A6B7A', marginTop: 2 }}>{detail.email}{detail.phone ? ' · ' + detail.phone : ''}</div>
           </div>
           <button onClick={vm.viewFullPage} className="cc-outline-btn" style={{ background: '#fff', color: '#1C2B39', border: '1px solid #E3E1DB', borderRadius: 3, padding: '7px 12px', fontWeight: 600, fontSize: '12.5px', whiteSpace: 'nowrap' }}>View full page</button>
           <button onClick={vm.closeDrawer} aria-label="Close" className="cc-close-btn" style={{ background: '#fff', border: '1px solid #E3E1DB', borderRadius: 3, width: 32, height: 32, fontSize: 17, color: '#5A6B7A', flexShrink: 0, lineHeight: 1 }}>×</button>
@@ -21,6 +22,13 @@ export default function Drawer({ vm }) {
             <div style={{ height: 8, background: '#EEF0F2', borderRadius: 4, overflow: 'hidden' }}><div style={detail.meterFillStyle} /></div>
             <div style={detail.meterLabelStyle}>{detail.meterLabel}</div>
           </div>
+          {detail.gc && (
+            <div style={{ border: '1px solid #E3E1DB', borderRadius: 6, padding: '11px 14px', background: '#FBFBFA' }}>
+              <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#8A93A0' }}>Escalation contact · GC</div>
+              <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3 }}>{detail.gc.company}{detail.gc.contact ? ' · ' + detail.gc.contact : ''}</div>
+              {(detail.gc.email || detail.gc.phone) && <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '11.5px', color: '#5A6B7A', marginTop: 2 }}>{detail.gc.email}{detail.gc.email && detail.gc.phone ? ' · ' : ''}{detail.gc.phone}</div>}
+            </div>
+          )}
           <section style={{ border: '1px solid #E3E1DB', borderRadius: 6, overflow: 'hidden' }}>
             <h3 style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0, padding: '12px 16px', borderBottom: '1px solid #E3E1DB', background: '#FBFBFA' }}>Required documents</h3>
             {detail.reqs.map((req) => <ReqRowDrawer key={req.key} req={req} />)}
