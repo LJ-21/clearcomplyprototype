@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap');
+
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; }
+body { background: #F7F6F3; }
+button { font-family: inherit; cursor: pointer; color: inherit; }
+select, input, textarea { font-family: inherit; color: inherit; }
+a { color: #0E5FD8; text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid #0E5FD8; outline-offset: 2px; }
+::selection { background: #0E5FD8; color: #fff; }
+
+@keyframes ccSlideIn {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Hover states (ported from the prototype's per-element style-hover rules) */
+.cc-primary-btn:hover { background: #0B4FB4 !important; }
+.cc-outline-btn:hover { border-color: #0E5FD8 !important; color: #0E5FD8 !important; }
+.cc-close-btn:hover { border-color: #C7CDD4 !important; color: #1C2B39 !important; }
+.cc-queue-card:hover { border-color: #C7CDD4 !important; background: #FCFCFB !important; }
+.cc-roster-row:hover { background: #FAFAF8 !important; }
+.cc-dropzone:hover { border-color: #0E5FD8 !important; background: #F5F9FF !important; }
+.cc-approve-btn:hover { background: #186B42 !important; }
