@@ -27,9 +27,9 @@ export class Store {
       toast: '', emailOpen: false, email: null,
       reviewOpen: false, review: null, rejectReason: '',
       projects: [
-        { name: 'Riverside Tower', pm: 'Dana Ruiz', location: '450 Riverside Dr, Chicago, IL', startDate: '2026-04-01', endDate: '2026-12-15', requiredDocs: ['insurance', 'w9', 'payroll', 'workforce'], gcCompany: 'Turner–Ridgeline JV', gcContact: 'Mark Feld', gcEmail: 'mfeld@ridgelinegc.com', gcPhone: '(312) 555-0142', notes: '$2M GL minimum · Davis-Bacon prevailing wage' },
-        { name: 'Midtown Transit Hub', pm: 'Marcus Bell', location: '88 Midtown Ave, New York, NY', startDate: '2026-02-15', endDate: '2027-03-30', requiredDocs: ['insurance', 'w9', 'payroll', 'workforce'], gcCompany: 'Metro Builders Group', gcContact: 'Sofia Reyes', gcEmail: 'sreyes@metrobuilders.com', gcPhone: '(212) 555-0198', notes: 'Public transit authority contract' },
-        { name: 'Harbor Point Ph. 2', pm: 'Priya Nair', location: '1200 Harbor Blvd, San Francisco, CA', startDate: '2026-05-01', endDate: '2026-11-30', requiredDocs: ['insurance', 'w9', 'payroll', 'workforce'], gcCompany: 'Coastline Construction', gcContact: 'Dev Kapoor', gcEmail: 'dkapoor@coastlinecc.com', gcPhone: '(415) 555-0176', notes: '' },
+        { name: 'Riverside Tower', pm: 'Dana Ruiz', location: '450 Riverside Dr, Chicago, IL', startDate: '2026-04-01', endDate: '2026-12-15', gcCompany: 'Turner–Ridgeline JV', gcContact: 'Mark Feld', gcEmail: 'mfeld@ridgelinegc.com', gcPhone: '(312) 555-0142', notes: '$2M GL minimum · Davis-Bacon prevailing wage' },
+        { name: 'Midtown Transit Hub', pm: 'Marcus Bell', location: '88 Midtown Ave, New York, NY', startDate: '2026-02-15', endDate: '2027-03-30', gcCompany: 'Metro Builders Group', gcContact: 'Sofia Reyes', gcEmail: 'sreyes@metrobuilders.com', gcPhone: '(212) 555-0198', notes: 'Public transit authority contract' },
+        { name: 'Harbor Point Ph. 2', pm: 'Priya Nair', location: '1200 Harbor Blvd, San Francisco, CA', startDate: '2026-05-01', endDate: '2026-11-30', gcCompany: 'Coastline Construction', gcContact: 'Dev Kapoor', gcEmail: 'dkapoor@coastlinecc.com', gcPhone: '(415) 555-0176', notes: '' },
       ],
       subs: this.makeSeed(),
       route: null,
@@ -126,9 +126,7 @@ export class Store {
   parseHash() { const h = (window.location.hash || '').replace(/^#/, ''); const m = h.match(/^\/upload\/([^/]+)\/([^/?]+)/); return m ? { name: 'upload', subId: decodeURIComponent(m[1]), token: m[2] } : null; }
   uploadLink(subId) { if (typeof window === 'undefined') return ''; const { origin, pathname } = window.location; return origin + pathname + '#/upload/' + subId + '/' + this.tok(subId); }
   blankSub() { return { name: '', trade: '', project: '', email: '', contactName: '', phone: '' }; }
-  blankProject() { return { name: '', location: '', startDate: '', endDate: '', notes: '', pmSelect: '', pmNew: '', gcSelect: '', gcCompany: '', gcContact: '', gcEmail: '', gcPhone: '' }; }
-  existingPms() { return Array.from(new Set(this.state.projects.map((p) => p.pm).filter(Boolean))); }
-  existingGcs() { const seen = new Map(); this.state.projects.forEach((p) => { if (p.gcCompany && !seen.has(p.gcCompany)) seen.set(p.gcCompany, { company: p.gcCompany, contact: p.gcContact || '', email: p.gcEmail || '', phone: p.gcPhone || '' }); }); return Array.from(seen.values()); }
+  blankProject() { return { name: '', location: '', startDate: '', endDate: '', notes: '', pm: '', gcCompany: '', gcContact: '', gcEmail: '', gcPhone: '' }; }
   fmtDay(s) { if (!s) return ''; const d = new Date(s + 'T00:00:00'); return isNaN(d) ? s : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
   nextTime() { this._min += 7; const h = 9 + Math.floor(this._min / 60); const m = this._min % 60; return 'Jul 8 · ' + String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0'); }
   addAudit(sub, actor, text) { sub.audit.unshift({ actor, text, ts: this.nextTime() }); }
@@ -180,31 +178,6 @@ export class Store {
     }
     return null;
   }
-  extraction(key, doc) {
-    if (key === 'insurance') {
-      return {
-        fields: [{ label: 'Document type', value: 'ACORD 25 — Certificate of Insurance' }, { label: 'Policy expiration', value: doc.expiry || 'Jul 31, 2026' }, { label: 'General liability', value: doc.status === 'rejected' ? '$1,000,000' : '$2,000,000' }],
-        checks: [{ ok: true, text: 'Document type matches the requirement.' }, { ok: !(doc.status === 'expired' || doc.status === 'expiring'), text: 'Coverage does not lapse before contract end (Dec 15, 2026).' }, { ok: doc.status !== 'rejected', text: 'Meets the $2M general-liability minimum.' }],
-      };
-    }
-    if (key === 'payroll') {
-      return {
-        fields: [{ label: 'Document type', value: 'WH-347 — Certified Payroll' }, { label: 'Period', value: doc.period || 'Week of Jun 30' }, { label: 'Workers reported', value: '14' }, { label: 'Lowest wage rate', value: '$43.60 / hr' }],
-        checks: [{ ok: true, text: 'Document type matches the requirement.' }, { ok: true, text: 'All classifications meet the $42.10 prevailing-wage floor.' }, { ok: true, text: 'Hours and gross wages reconcile.' }],
-      };
-    }
-    if (key === 'workforce') {
-      return {
-        fields: [{ label: 'Document type', value: 'Monthly Workforce Report' }, { label: 'Month', value: doc.period || 'June' }, { label: 'Total workers', value: '22' }, { label: 'Apprentice ratio', value: '18%' }],
-        checks: [{ ok: true, text: 'Document type matches the requirement.' }, { ok: true, text: 'Headcount totals reconcile with payroll.' }],
-      };
-    }
-    return {
-      fields: [{ label: 'Document type', value: 'IRS Form W-9' }, { label: 'TIN', value: '**-***4821' }, { label: 'Signature', value: 'Present' }],
-      checks: [{ ok: true, text: 'Required fields are present.' }, { ok: true, text: 'Signature block is completed.' }],
-    };
-  }
-
   // ---- navigation ----
   goHome = () => this.set({ view: 'dashboard', drawerOpen: false });
   setNav = (v) => this.set({ view: v, drawerOpen: false, queuePage: 0, rosterPage: 0 });
@@ -215,7 +188,6 @@ export class Store {
   onProjectChange = (e) => this.set({ projectFilter: e.target.value, queuePage: 0, rosterPage: 0 });
   toggleMissingOnly = () => this.set({ missingOnly: !this.state.missingOnly, rosterPage: 0 });
   setQueueFilter = (cat) => this.set({ queueFilter: cat, queuePage: 0 });
-  setScope = (sc) => this.set({ scope: sc, queuePage: 0 });
   escalateToGC = (subId, docKey) => {
     const sub = this.findSub(subId), doc = sub.docs[docKey], def = this.DOCS.find((d) => d.key === docKey);
     const proj = this.state.projects.find((p) => p.name === sub.project);
@@ -310,24 +282,14 @@ export class Store {
   };
 
   // ---- onboarding (create project / subcontractor) ----
-  reqDocsFor(projectName) {
-    const p = this.state.projects.find((x) => x.name === projectName);
-    const ids = p && p.requiredDocs ? p.requiredDocs : this.DOCS.map((d) => d.key);
-    return this.DOCS.filter((d) => ids.includes(d.key));
-  }
+  // MVP v1: every subcontractor gets the same fixed 4-document requirement set.
+  // (Per-project variable requirements are deferred to v1.1 — see MVP60 plan.)
+  reqDocsFor() { return this.DOCS; }
   openOnboard = (mode) => this.set({ onboardOpen: true, onboardMode: mode || 'sub', onboardStep: 1, onboardError: '', onboardCreatedLink: null, onboardSub: this.blankSub(), onboardProject: this.blankProject() });
   closeOnboard = () => this.set({ onboardOpen: false, onboardStep: 1, onboardError: '', onboardCreatedLink: null });
   setOnboardMode = (mode) => this.set({ onboardMode: mode, onboardStep: 1, onboardError: '' });
   onOnboardSub = (field, e) => { this.state.onboardSub[field] = e.target.value; this.forceUpdate(); };
   onOnboardProject = (field, e) => { this.state.onboardProject[field] = e.target.value; this.forceUpdate(); };
-  onOnboardPmSelect = (e) => { const v = e.target.value; this.state.onboardProject.pmSelect = v; if (v !== '__new__') this.state.onboardProject.pmNew = ''; this.forceUpdate(); };
-  onOnboardGcSelect = (e) => {
-    const v = e.target.value, p = this.state.onboardProject;
-    p.gcSelect = v;
-    if (v === '__new__' || v === '') { p.gcCompany = ''; p.gcContact = ''; p.gcEmail = ''; p.gcPhone = ''; }
-    else { const g = this.existingGcs().find((x) => x.company === v); if (g) { p.gcCompany = g.company; p.gcContact = g.contact; p.gcEmail = g.email; p.gcPhone = g.phone; } }
-    this.forceUpdate();
-  };
   onboardBack = () => this.set({ onboardStep: 1, onboardError: '' });
   onboardNext = () => {
     const f = this.state.onboardSub;
@@ -338,17 +300,14 @@ export class Store {
   };
 
   submitOnboardProject = () => {
-    const f = this.state.onboardProject, name = (f.name || '').trim();
-    const pm = (f.pmSelect === '__new__' ? (f.pmNew || '').trim() : (f.pmSelect || '').trim()) || 'Unassigned';
+    const f = this.state.onboardProject, name = (f.name || '').trim(), pm = (f.pm || '').trim() || 'Unassigned';
     const gcEmail = (f.gcEmail || '').trim();
     if (!name) { this.set({ onboardError: 'Project name is required.' }); return; }
     if (this.state.projects.some((p) => p.name.toLowerCase() === name.toLowerCase())) { this.set({ onboardError: 'A project with that name already exists.' }); return; }
-    if (f.pmSelect === '__new__' && !(f.pmNew || '').trim()) { this.set({ onboardError: 'Enter the new project manager’s name.' }); return; }
     if (gcEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(gcEmail)) { this.set({ onboardError: 'Enter a valid GC email address.' }); return; }
     if (f.startDate && f.endDate && f.endDate < f.startDate) { this.set({ onboardError: 'End date must be after the start date.' }); return; }
     this.state.projects.push({
       name, pm, location: (f.location || '').trim(), startDate: f.startDate || '', endDate: f.endDate || '',
-      requiredDocs: ['insurance', 'w9', 'payroll', 'workforce'],
       gcCompany: (f.gcCompany || '').trim(), gcContact: (f.gcContact || '').trim(), gcEmail, gcPhone: (f.gcPhone || '').trim(), notes: (f.notes || '').trim(),
     });
     this.state.onboardProject = this.blankProject();
@@ -369,7 +328,7 @@ export class Store {
     const docs = {};
     reqDefs.forEach((d) => { docs[d.key] = mk(d.key === 'payroll' ? { period: 'Week of Jul 7' } : d.key === 'workforce' ? { period: 'July' } : undefined); });
     const sub = { id, name, trade: trade || '—', project, email, contactName, phone, docs, audit: [] };
-    if (!this.state.projects.some((p) => p.name === project)) this.state.projects.push({ name: project, pm: 'Unassigned', requiredDocs: this.DOCS.map((d) => d.key) });
+    if (!this.state.projects.some((p) => p.name === project)) this.state.projects.push({ name: project, pm: 'Unassigned' });
     const reqList = reqDefs.map((d) => d.label).join(', ');
     sub.audit.unshift({ actor: 'SYSTEM', ts: this.nextTime(), text: 'Subcontractor added to ' + project + '. Requirement set auto-generated (' + reqList + ').' });
     const link = this.uploadLink(id);
@@ -439,8 +398,7 @@ export class Store {
     items.sort((a, b) => b.score - a.score);
     return items;
   }
-  scopedQueue() { const all = this.buildQueueAll(); return this.state.scope === 'mine' ? all.filter((i) => i.pm === this.loggedPm) : all; }
-  filteredQueue() { const all = this.scopedQueue(); const f = this.state.queueFilter || 'all'; return f === 'all' ? all : all.filter((i) => i.cat === f); }
+  filteredQueue() { const all = this.buildQueueAll(); const f = this.state.queueFilter || 'all'; return f === 'all' ? all : all.filter((i) => i.cat === f); }
   rosterList() {
     const C = this.C(), DOCS = this.DOCS;
     let list = this.visibleSubs();
@@ -538,23 +496,16 @@ export class Store {
       mkTile(overdue, 'Overdue items', C.danger, 4),
     ];
 
-    // Queue + scope + filters + pagination
-    const scopedQ = this.scopedQueue();
-    const counts = { all: scopedQ.length, review: 0, due: 0, overdue: 0, expiring: 0, rejected: 0 };
-    scopedQ.forEach((i) => { counts[i.cat] = (counts[i.cat] || 0) + 1; });
+    // Queue + filters + pagination (MVP v1: no per-PM scoping — single compliance view)
+    const allQ = this.buildQueueAll();
+    const counts = { all: allQ.length, review: 0, due: 0, overdue: 0, expiring: 0, rejected: 0 };
+    allQ.forEach((i) => { counts[i.cat] = (counts[i.cat] || 0) + 1; });
     const filterDef = [['all', 'All'], ['review', 'Needs review'], ['due', 'Due soon'], ['overdue', 'Overdue'], ['expiring', 'Expiring'], ['rejected', 'Rejected']];
     const queueFilters = filterDef.map(([cat, label]) => {
       const active = (S.queueFilter || 'all') === cat;
       return {
         key: cat, label: label + ' (' + (counts[cat] || 0) + ')', onClick: () => this.setQueueFilter(cat),
         style: { border: '1px solid ' + (active ? C.ink : C.line), background: active ? C.ink : '#fff', color: active ? '#fff' : C.inkSoft, borderRadius: '999px', padding: '5px 13px', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer' },
-      };
-    });
-    const scopeToggle = [['mine', 'My items'], ['all', 'All items']].map(([sc, label]) => {
-      const active = (S.scope || 'mine') === sc;
-      return {
-        key: sc, label: sc === 'mine' ? ('My items · ' + this.loggedPm) : label, onClick: () => this.setScope(sc),
-        style: { border: '1px solid ' + (active ? C.accent : C.line), background: active ? '#EEF3FE' : '#fff', color: active ? C.accent : C.inkSoft, borderRadius: '3px', padding: '7px 13px', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer' },
       };
     });
     const filtered = this.filteredQueue();
@@ -639,13 +590,8 @@ export class Store {
     const email = S.email || { to: '', subject: '', body: '', subName: '' };
     let review = null;
     if (S.reviewOpen && S.review) {
-      const rs = this.findSub(S.review.subId), def = DOCS.find((d) => d.key === S.review.docKey), doc = rs.docs[S.review.docKey];
-      const built = this.extraction(def.key, doc);
-      review = {
-        docLabel: def.label, subName: rs.name, fields: built.fields.map((f, fi) => ({ ...f, key: fi })),
-        checks: built.checks.map((c, ci) => ({ key: ci, icon: c.ok ? '✓' : '✗', iconStyle: { color: c.ok ? C.ok : C.danger, fontWeight: 700, fontSize: '15px', lineHeight: 1.2 }, text: c.text })),
-        rejecting: !!S.review.rejecting, notRejecting: !S.review.rejecting,
-      };
+      const rs = this.findSub(S.review.subId), def = DOCS.find((d) => d.key === S.review.docKey);
+      review = { docLabel: def.label, subName: rs.name, rejecting: !!S.review.rejecting, notRejecting: !S.review.rejecting };
     }
 
     return {
@@ -653,7 +599,7 @@ export class Store {
       projectFilter: S.projectFilter, onProjectChange: this.onProjectChange, projectOptions, runSweep: this.runSweep, toast: S.toast,
       isDashboard, isSubs, isProjects, isDetailPage, showRoster,
       kpis,
-      queueFilters, scopeToggle, queue, queueEmpty: filtered.length === 0, queueHasItems: filtered.length > 0,
+      queueFilters, queue, queueEmpty: filtered.length === 0, queueHasItems: filtered.length > 0,
       queueCountLabel: filtered.length + ' items need action', queuePager,
       toggleMissingOnly: this.toggleMissingOnly, missingOnlyStyle,
       roster, rosterEmpty: rosterAll.length === 0, rosterPager,
@@ -675,10 +621,8 @@ export class Store {
       onboardSub: S.onboardSub, onboardProject: S.onboardProject, onboardProjectNames: projects,
       onboardReqPreview: S.onboardSub.project ? this.reqDocsFor(S.onboardSub.project).map((d) => ({ key: d.key, label: d.label, cadence: d.cadence })) : [],
       onboardProjectPm: S.onboardSub.project ? this.pmFor(S.onboardSub.project) : null,
-      onboardPms: this.existingPms(), onboardGcs: this.existingGcs(),
       openOnboard: this.openOnboard, closeOnboard: this.closeOnboard, setOnboardMode: this.setOnboardMode,
       onOnboardSub: this.onOnboardSub, onOnboardProject: this.onOnboardProject,
-      onOnboardPmSelect: this.onOnboardPmSelect, onOnboardGcSelect: this.onOnboardGcSelect,
       onboardNext: this.onboardNext, onboardBack: this.onboardBack,
       submitOnboardSub: this.submitOnboardSub, submitOnboardProject: this.submitOnboardProject,
       copyUploadLink: this.copyUploadLink, openUploadLink: this.openUploadLink,

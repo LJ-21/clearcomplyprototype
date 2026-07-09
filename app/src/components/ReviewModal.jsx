@@ -10,23 +10,11 @@ export default function ReviewModal({ vm }) {
           <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 20, marginTop: 2 }}>{review.docLabel}</div>
         </div>
         <div style={{ padding: '18px 20px' }}>
-          <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#5A6B7A', marginBottom: 8 }}>Extracted fields</div>
-          <div style={{ border: '1px solid #E3E1DB', borderRadius: 6, overflow: 'hidden', marginBottom: 16 }}>
-            {review.fields.map((f) => (
-              <div key={f.key} style={{ display: 'flex', gap: 12, padding: '9px 14px', borderBottom: '1px solid #F2F1ED' }}>
-                <div style={{ width: 160, fontSize: 12, color: '#5A6B7A', fontWeight: 600, flexShrink: 0 }}>{f.label}</div>
-                <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 13 }}>{f.value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#5A6B7A', marginBottom: 8 }}>Rules check</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {review.checks.map((c) => (
-              <div key={c.key} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 13 }}>
-                <span style={c.iconStyle}>{c.icon}</span>
-                <span>{c.text}</span>
-              </div>
-            ))}
+          <div style={{ border: '1px solid #E3E1DB', borderRadius: 6, padding: '14px 16px', background: '#FBFBFA' }}>
+            <div style={{ fontSize: '13.5px', lineHeight: 1.55, color: '#1C2B39' }}>
+              The document was received from <strong>{review.subName}</strong> and is ready for your review. Open the file, confirm it meets the requirement, then approve it or reject it with a reason.
+            </div>
+            <div style={{ fontSize: 12, color: '#5A6B7A', marginTop: 8 }}>Automated field extraction and rules checks are a post-MVP addition — see the MVP60 plan.</div>
           </div>
         </div>
         {review.rejecting && (
