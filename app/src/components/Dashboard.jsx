@@ -15,11 +15,6 @@ export default function Dashboard({ vm }) {
           <h2 style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 18, margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Action Queue</h2>
           <span style={{ fontSize: 12, color: '#5A6B7A', fontFamily: "'IBM Plex Mono',monospace" }}>{vm.queueCountLabel}</span>
           <div style={{ flex: 1 }} />
-          <div style={{ display: 'flex', gap: 6 }}>
-            {vm.scopeToggle.map((sc) => (
-              <button key={sc.key} onClick={sc.onClick} style={sc.style}>{sc.label}</button>
-            ))}
-          </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 13 }}>
           {vm.queueFilters.map((qf) => (

@@ -9,10 +9,16 @@ draws a hard line around what ships in v1 vs. what waits.
 
 ---
 
+> **This branch (`MVP60`) also strips the prototype down to the v1 scope below.**
+> The deferred features (simulated AI review, GC/PM directory reuse, per-project
+> variable requirement sets, multi-project PM scoping) have been removed from the
+> app so the working prototype reflects what one builder would actually ship.
+
 ## Assumptions
 
-- **Team:** 2 engineers + 1 product/builder (AI-assisted). ~8 working weeks.
+- **Team:** 1 product engineer / builder (AI-assisted). Single-threaded — no parallelism, so scope discipline is everything.
 - **60 days = ~8 weeks**, with a feature freeze at week 6 and 2 weeks of hardening.
+- With one builder, the plan below is aggressive but achievable **only** because AI, integrations, and the prototype's extra features are all deferred. Any scope added back pushes past 60 days.
 - **Users at launch:** internal compliance professionals / PMs (single org, few seats). Subcontractors interact only through a public secure-link portal — no accounts.
 - The prototype's `Store` view-model is treated as the **product spec** (data model + interactions), which removes most design ambiguity.
 
