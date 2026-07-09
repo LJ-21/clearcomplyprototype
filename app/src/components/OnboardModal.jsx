@@ -145,37 +145,69 @@ export default function OnboardModal({ vm }) {
               </>
             )}
 
-            {mode === 'project' && (
-              <>
-                <Field label="Project name">
-                  <input style={inputStyle} value={vm.onboardProject.name} onChange={(e) => vm.onOnboardProject('name', e)} placeholder="e.g. Lakeside Pavilion" />
-                </Field>
-                <Field label="Location / address">
-                  <input style={inputStyle} value={vm.onboardProject.location} onChange={(e) => vm.onOnboardProject('location', e)} placeholder="e.g. 1200 Harbor Blvd, San Francisco, CA" />
-                </Field>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ flex: 1 }}><Field label="Start date"><input type="date" style={inputStyle} value={vm.onboardProject.startDate} onChange={(e) => vm.onOnboardProject('startDate', e)} /></Field></div>
-                  <div style={{ flex: 1 }}><Field label="Target completion"><input type="date" style={inputStyle} value={vm.onboardProject.endDate} onChange={(e) => vm.onOnboardProject('endDate', e)} /></Field></div>
-                </div>
-                <Field label="Project manager">
-                  <input style={inputStyle} value={vm.onboardProject.pm} onChange={(e) => vm.onOnboardProject('pm', e)} placeholder="e.g. Dana Ruiz" />
-                </Field>
-
-                <div style={{ borderTop: '1px solid ' + L, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  <div style={{ fontSize: 12, color: SOFT, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>General contractor · escalation path</div>
-                  <Field label="GC company"><input style={inputStyle} value={vm.onboardProject.gcCompany} onChange={(e) => vm.onOnboardProject('gcCompany', e)} placeholder="e.g. Turner–Ridgeline JV" /></Field>
-                  <Field label="Point of contact"><input style={inputStyle} value={vm.onboardProject.gcContact} onChange={(e) => vm.onOnboardProject('gcContact', e)} placeholder="e.g. Mark Feld" /></Field>
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <div style={{ flex: 1 }}><Field label="Email"><input style={inputStyle} value={vm.onboardProject.gcEmail} onChange={(e) => vm.onOnboardProject('gcEmail', e)} placeholder="pm@gc.com" /></Field></div>
-                    <div style={{ flex: 1 }}><Field label="Phone"><input style={inputStyle} value={vm.onboardProject.gcPhone} onChange={(e) => vm.onOnboardProject('gcPhone', e)} placeholder="(555) 123-4567" /></Field></div>
-                  </div>
-                  <Field label="Other important info">
-                    <textarea style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} rows={2} value={vm.onboardProject.notes} onChange={(e) => vm.onOnboardProject('notes', e)} placeholder="Insurance minimums, prevailing-wage rules, special requirements…" />
+            {mode === 'project' && (() => {
+              const p = vm.onboardProject;
+              const pmNew = p.pmSelect === '__new__';
+              const gcNew = p.gcSelect === '__new__';
+              const gcExisting = p.gcSelect && !gcNew;
+              return (
+                <>
+                  <Field label="Project name">
+                    <input style={inputStyle} value={p.name} onChange={(e) => vm.onOnboardProject('name', e)} placeholder="e.g. Lakeside Pavilion" />
                   </Field>
-                </div>
-                <div style={{ fontSize: 12, color: SOFT, lineHeight: 1.5 }}>The GC contact is the escalation target when a subcontractor goes non-responsive. Create the project first, then onboard subs to it.</div>
-              </>
-            )}
+                  <Field label="Location / address">
+                    <input style={inputStyle} value={p.location} onChange={(e) => vm.onOnboardProject('location', e)} placeholder="e.g. 1200 Harbor Blvd, San Francisco, CA" />
+                  </Field>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ flex: 1 }}><Field label="Start date"><input type="date" style={inputStyle} value={p.startDate} onChange={(e) => vm.onOnboardProject('startDate', e)} /></Field></div>
+                    <div style={{ flex: 1 }}><Field label="Target completion"><input type="date" style={inputStyle} value={p.endDate} onChange={(e) => vm.onOnboardProject('endDate', e)} /></Field></div>
+                  </div>
+                  <Field label="Project manager">
+                    <select style={inputStyle} value={p.pmSelect} onChange={vm.onOnboardPmSelect}>
+                      <option value="">Select project manager…</option>
+                      {vm.onboardPms.map((n) => <option key={n} value={n}>{n}</option>)}
+                      <option value="__new__">+ Add new project manager…</option>
+                    </select>
+                  </Field>
+                  {pmNew && (
+                    <Field label="New project manager name">
+                      <input style={inputStyle} value={p.pmNew} onChange={(e) => vm.onOnboardProject('pmNew', e)} placeholder="e.g. Dana Ruiz" />
+                    </Field>
+                  )}
+
+                  <div style={{ borderTop: '1px solid ' + L, paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ fontSize: 12, color: SOFT, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>General contractor · escalation path</div>
+                    <Field label="General contractor">
+                      <select style={inputStyle} value={p.gcSelect} onChange={vm.onOnboardGcSelect}>
+                        <option value="">No GC yet</option>
+                        {vm.onboardGcs.map((g) => <option key={g.company} value={g.company}>{g.company}</option>)}
+                        <option value="__new__">+ Add new GC…</option>
+                      </select>
+                    </Field>
+                    {gcExisting && (
+                      <div style={{ fontSize: 12.5, color: SOFT, background: '#FBFBFA', border: '1px solid ' + L, borderRadius: 6, padding: '10px 12px', lineHeight: 1.5 }}>
+                        <div>Contact: <strong style={{ color: INK }}>{p.gcContact || '—'}</strong></div>
+                        <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: 11.5, marginTop: 2 }}>{p.gcEmail}{p.gcEmail && p.gcPhone ? ' · ' : ''}{p.gcPhone}</div>
+                      </div>
+                    )}
+                    {gcNew && (
+                      <>
+                        <Field label="GC company"><input style={inputStyle} value={p.gcCompany} onChange={(e) => vm.onOnboardProject('gcCompany', e)} placeholder="e.g. Turner–Ridgeline JV" /></Field>
+                        <Field label="Point of contact"><input style={inputStyle} value={p.gcContact} onChange={(e) => vm.onOnboardProject('gcContact', e)} placeholder="e.g. Mark Feld" /></Field>
+                        <div style={{ display: 'flex', gap: 12 }}>
+                          <div style={{ flex: 1 }}><Field label="Email"><input style={inputStyle} value={p.gcEmail} onChange={(e) => vm.onOnboardProject('gcEmail', e)} placeholder="pm@gc.com" /></Field></div>
+                          <div style={{ flex: 1 }}><Field label="Phone"><input style={inputStyle} value={p.gcPhone} onChange={(e) => vm.onOnboardProject('gcPhone', e)} placeholder="(555) 123-4567" /></Field></div>
+                        </div>
+                      </>
+                    )}
+                    <Field label="Other important info">
+                      <textarea style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5 }} rows={2} value={p.notes} onChange={(e) => vm.onOnboardProject('notes', e)} placeholder="Insurance minimums, prevailing-wage rules, special requirements…" />
+                    </Field>
+                  </div>
+                  <div style={{ fontSize: 12, color: SOFT, lineHeight: 1.5 }}>The GC contact is the escalation target when a subcontractor goes non-responsive. Create the project first, then onboard subs to it.</div>
+                </>
+              );
+            })()}
 
             {vm.onboardError && <div style={{ fontSize: 12.5, color: '#B3261E', fontWeight: 600 }}>{vm.onboardError}</div>}
           </div>
