@@ -17,7 +17,7 @@ export default function Drawer({ vm }) {
           <button onClick={vm.viewFullPage} className="cc-outline-btn" style={{ background: '#fff', color: '#1C2B39', border: '1px solid #E3E1DB', borderRadius: 3, padding: '7px 12px', fontWeight: 600, fontSize: '12.5px', whiteSpace: 'nowrap' }}>View full page</button>
           <button onClick={vm.closeDrawer} aria-label="Close" className="cc-close-btn" style={{ background: '#fff', border: '1px solid #E3E1DB', borderRadius: 3, width: 32, height: 32, fontSize: 17, color: '#5A6B7A', flexShrink: 0, lineHeight: 1 }}>×</button>
         </div>
-        <div style={{ overflowY: 'auto', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div style={{ overflowY: 'auto', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 18, flex: 1, minHeight: 0 }}>
           <div>
             <div style={{ height: 8, background: '#EEF0F2', borderRadius: 4, overflow: 'hidden' }}><div style={detail.meterFillStyle} /></div>
             <div style={detail.meterLabelStyle}>{detail.meterLabel}</div>
@@ -29,9 +29,11 @@ export default function Drawer({ vm }) {
               {(detail.gc.email || detail.gc.phone) && <div style={{ fontFamily: "'IBM Plex Mono',monospace", fontSize: '11.5px', color: '#5A6B7A', marginTop: 2 }}>{detail.gc.email}{detail.gc.email && detail.gc.phone ? ' · ' : ''}{detail.gc.phone}</div>}
             </div>
           )}
-          <section style={{ border: '1px solid #E3E1DB', borderRadius: 6, overflow: 'hidden' }}>
-            <h3 style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0, padding: '12px 16px', borderBottom: '1px solid #E3E1DB', background: '#FBFBFA' }}>Required documents</h3>
-            {detail.reqs.map((req) => <ReqRowDrawer key={req.key} req={req} />)}
+          <section style={{ border: '1px solid #E3E1DB', borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <h3 style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0, padding: '12px 16px', borderBottom: '1px solid #E3E1DB', background: '#FBFBFA', flexShrink: 0 }}>Required documents</h3>
+            <div style={{ overflowY: 'auto', minHeight: 0 }}>
+              {detail.reqs.map((req) => <ReqRowDrawer key={req.key} req={req} />)}
+            </div>
           </section>
           <section>
             <div onClick={detail.onUpload} className="cc-dropzone" style={{ border: '1.5px dashed #C7CDD4', borderRadius: 6, padding: 20, textAlign: 'center', cursor: 'pointer', background: '#FBFBFA' }}>
@@ -39,9 +41,11 @@ export default function Drawer({ vm }) {
               <div style={{ fontSize: 12, color: '#5A6B7A', marginTop: 5 }}>Simulates a subcontractor upload · routes to your review</div>
             </div>
           </section>
-          <section style={{ border: '1px solid #E3E1DB', borderRadius: 6, overflow: 'hidden' }}>
-            <h3 style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0, padding: '12px 16px', borderBottom: '1px solid #E3E1DB', background: '#FBFBFA' }}>Activity log · audit trail</h3>
-            <AuditLog audit={detail.audit} drawer />
+          <section style={{ border: '1px solid #E3E1DB', borderRadius: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <h3 style={{ fontFamily: "'Barlow Semi Condensed',sans-serif", fontWeight: 700, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0, padding: '12px 16px', borderBottom: '1px solid #E3E1DB', background: '#FBFBFA', flexShrink: 0 }}>Activity log · audit trail</h3>
+            <div style={{ overflowY: 'auto', minHeight: 0 }}>
+              <AuditLog audit={detail.audit} drawer />
+            </div>
           </section>
         </div>
       </div>
