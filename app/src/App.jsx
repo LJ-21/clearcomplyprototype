@@ -12,7 +12,7 @@ import ReviewModal from './components/ReviewModal.jsx';
 import OnboardModal from './components/OnboardModal.jsx';
 import UploadPortal from './components/UploadPortal.jsx';
 
-export default function App() {
+export default function App({ identity, onSignOut }) {
   const vm = useStore();
 
   // Public subcontractor upload portal (reached via the secure link hash route).
@@ -20,7 +20,7 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#F7F6F3', color: '#1C2B39', fontFamily: 'Inter,system-ui,sans-serif', fontSize: 15, lineHeight: 1.5, WebkitFontSmoothing: 'antialiased' }}>
-      <Sidebar vm={vm} />
+      <Sidebar vm={vm} identity={identity} onSignOut={onSignOut} />
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
         <Header vm={vm} />
