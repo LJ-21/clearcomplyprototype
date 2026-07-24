@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '../lib/supabaseClient.js';
 import { PASSWORD_RULES, validatePassword } from '../lib/passwordPolicy.js';
 
-const inputStyle = { border: '1px solid #E3E1DB', borderRadius: 3, padding: '10px 12px', fontSize: '13.5px' };
+const inputStyle = { border: '1px solid #E3E1DB', borderRadius: 3, padding: '10px 12px', fontSize: '13.5px', width: '100%', boxSizing: 'border-box' };
 const labelTextStyle = { fontSize: 12, color: '#5A6B7A', fontWeight: 600 };
 
 function Field({ label, pendoId, ...inputProps }) {
@@ -126,10 +126,10 @@ export default function Login() {
             <div style={{ fontSize: '13.5px', color: '#5A6B7A', marginBottom: 20 }}>Join your organization on ClearComply.</div>
 
             <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <Field label="First name" pendoId="signup-first-name" type="text" autoComplete="given-name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <Field label="Last name" pendoId="signup-last-name" type="text" autoComplete="family-name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
               </div>
             </div>
